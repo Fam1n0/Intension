@@ -1,0 +1,118 @@
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Monks Influencing Light</title>
+<style>
+body, html { margin: 0; padding: 0; overflow: hidden; font-family: Arial, sans-serif; background: #000; }
+</style>
+</head>
+<body>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script>
+let scene, camera, renderer, light, ambientLight, monks = [], influencedObjects = [], center, influenceCounter = 0;
+
+function init() {
+    scene = new THREE.Scene();
+    camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
+    renderer = new THREE.WebGLRenderer({ antialias: true });
+    renderer.setSize(window.innerWidth, window.innerHeight);
+    renderer.shadowMap.enabled = true;
+    document.body.appendChild(renderer.domElement);
+
+    light = new THREE.PointLight(0xffffff, 1, 100);
+    light.position.set(0, 0, 5);
+    light.castShadow = true;
+    scene.add(light);
+
+    ambientLight = new THREE.AmbientLight(0x404040);
+    scene.add(ambientLight);
+
+    camera.position.z = 10;
+
+    createMonks();
+    createCenterLight();
+
+    animate();
+}
+
+function createMonks() {
+    const positions = [
+        { x: -3, y: -3 },
+        { x: 3, y: -3 },
+        { x: -3, y: 3 },
+        { x: 3, y: 3 }
+    ];
+
+    positions.forEach(pos => {
+        const monkGeometry = new THREE.SphereGeometry(0.5, 32, 32);
+        const monkMaterial = new THREE.MeshStandardMaterial({ color: 0xaaaaaa });
+        const monk = new THREE.Mesh(monkGeometry, monkMaterial);
+        monk.position.set(pos.x, pos.y, 0);
+        monk.castShadow = true;
+        monk.receiveShadow = true;
+        scene.add(monk);
+        monks.push(monk);
+    });
+}
+
+function createCenterLight() {
+    const centerGeometry = new THREE.SphereGeometry(0.5, 32, 32);
+    const centerMaterial = new THREE.MeshStandardMaterial({ color: 0xffff00 });
+    center = new THREE.Mesh(centerGeometry, centerMaterial);
+    center.position.set(0, 0, 0);
+    center.castShadow = true;
+    center.receiveShadow = true;
+    scene.add(center);
+}
+
+function animate() {
+    requestAnimationFrame(animate);
+
+    monks.forEach((monk, index) => {
+        const influence = Math.sin((Date.now() * 0.001) + index);
+        monk.position.z = influence;
+
+        if (index === influenceCounter % monks.length) {
+            influenceCenter(monk);
+        }
+    });
+
+    influencedObjects.forEach(obj => {
+        obj.position.x += obj.velocity.x;
+        obj.position.y += obj.velocity.y;
+        obj.position.z += obj.velocity.z;
+
+        const trail = new THREE.Line(
+            new THREE.BufferGeometry().setFromPoints([center.position, obj.position]),
+            new THREE.LineBasicMaterial({ color: obj.material.color })
+        );
+        scene.add(trail);
+    });
+
+    renderer.render(scene, camera);
+}
+
+function influenceCenter(monk) {
+    influenceCounter++;
+
+    const influencedObject = center.clone();
+    influencedObject.material = influencedObject.material.clone();
+    influencedObject.material.color.set(Math.random() * 0xffffff);
+    influencedObject.scale.setScalar(Math.random() * 2);
+
+    const direction = new THREE.Vector3(
+        (Math.random() - 0.5) * 0.02,
+        (Math.random() - 0.5) * 0.02,
+        (Math.random() - 0.5) * 0.02
+    );
+
+    influencedObject.velocity = direction;
+
+    scene.add(influencedObject);
+    influencedObjects.push(influencedObject);
+}
+
+init();
+</script>
+</body>
+</html>
